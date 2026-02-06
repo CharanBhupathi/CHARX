@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Waiting+for+the+Sunrise&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Hubballi&family=Suravaram&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Mukta&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Music Control Button -->
+    <button id="musicControl" class="music-control">Pause.</button>
+
+    <!-- Center Text -->
+    <div class="center-text" id="centerText">Charan Bhupathi.</div>
+
+    <!-- Navigation Links -->
+    <nav class="navigation">
+        <a href="about.html" class="nav-link" data-page="about">About.</a>
+        <a href="projects.html" class="nav-link" data-page="projects">Projects.</a>
+        <a href="habits.html" class="nav-link" data-page="habits">Habits.</a>
+        <a href="other.html" class="nav-link" data-page="other">Other.</a>
+    </nav>
+
+    <!-- Content Container for SPA -->
+    <div id="contentContainer" style="display: none;"></div>
+
+    <!-- Music Player -->
+    <audio id="backgroundMusic" loop preload="auto" autoplay>
+        <source src="music.mp3" type="audio/mpeg">
+        <source src="music.ogg" type="audio/ogg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        // IMMEDIATE audio restoration - runs before anything else
+        (function() {
+            'use strict';
+            const wasPlaying = sessionStorage.getItem('musicPlaying') === 'true';
+            const savedTime = parseFloat(sessionStorage.getItem('musicTime') || '0');
+            
+            // Try to get audio immediately
+            let music = document.getElementById('backgroundMusic');
+            
+            if (!music && document.body) {
+                // If audio doesn't exist yet, wait for it
+                const checkForAudio = setInterval(() => {
+                    music = document.getElementById('backgroundMusic');
+                    if (music) {
+                        clearInterval(checkForAudio);
+                        initMusic();
+                    }
+                }, 1);
+            } else if (music) {
+                initMusic();
+            } else {
+                // Wait for DOM
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        music = document.getElementById('backgroundMusic');
+                        if (music) initMusic();
+                    });
+                }
+            }
+            
+            function initMusic() {
+                if (!music) return;
+                
+                music.volume = 0.3;
+                music.preload = 'auto';
+                
+                // Immediate restoration attempt
+                const restore = () => {
+                    if (wasPlaying && savedTime > 0) {
+                        try {
+                            if (music.readyState >= 2) {
+                                music.currentTime = savedTime;
+                            }
+                            if (music.paused) {
+                                const playPromise = music.play();
+                                if (playPromise) {
+                                    playPromise.then(() => {
+                                        if (Math.abs(music.currentTime - savedTime) > 0.3) {
+                                            music.currentTime = savedTime;
+                                        }
+                                    }).catch(() => {});
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                };
+                
+                // Try immediately
+                restore();
+                
+                // Try on every possible event
+                ['loadstart', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing'].forEach(evt => {
+                    music.addEventListener(evt, restore, { once: true, passive: true });
+                });
+                
+                // Aggressive retry
+                requestAnimationFrame(restore);
+                setTimeout(restore, 0);
+                setTimeout(restore, 10);
+                setTimeout(restore, 50);
+                setTimeout(restore, 100);
+                setTimeout(restore, 200);
+            }
+        })();
+    </script>
+    <script src="script.js"></script>
+    <script>
+        // Single Page Application - Load content without page reload
+        (function() {
+            const contentContainer = document.getElementById('contentContainer');
+            const navLinks = document.querySelectorAll('.nav-link[data-page]');
+            const centerText = document.getElementById('centerText');
+            const navigation = document.querySelector('.navigation');
+            
+            const pageContent = {
+                about: { text: 'OM', hasBack: true },
+                projects: { text: 'OM', hasBack: true },
+                habits: { text: 'OM', hasBack: true },
+                other: { text: 'OM', hasBack: true }
+            };
+            
+            function showPage(pageName) {
+                // Hide center text and navigation on sub-pages
+                if (pageName) {
+                    if (centerText) centerText.style.display = 'none';
+                    if (navigation) {
+                        navLinks.forEach(link => {
+                            if (link.dataset.page === pageName) {
+                                link.classList.add('current-page');
+                            } else {
+                                link.classList.remove('current-page');
+                            }
+                        });
+                    }
+                    
+                    // Show content
+                    const content = pageContent[pageName];
+                    if (contentContainer && content) {
+                        contentContainer.innerHTML = `
+                            <div class="content-page">
+                                <div class="content-box">${content.text}</div>
+                            </div>
+                            ${content.hasBack ? '<a href="index.html" class="back-link" id="backBtn">−</a>' : ''}
+                        `;
+                        contentContainer.style.display = 'block';
+                        
+                        // Handle back button
+                        const backBtn = document.getElementById('backBtn');
+                        if (backBtn) {
+                            backBtn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                showHome();
+                            });
+                        }
+                    }
+                } else {
+                    // Show home
+                    if (centerText) centerText.style.display = 'block';
+                    if (contentContainer) contentContainer.style.display = 'none';
+                    if (navigation) {
+                        navLinks.forEach(link => link.classList.remove('current-page'));
+                    }
+                }
+                
+                // Update URL without reload
+                const url = pageName ? `${pageName}.html` : 'index.html';
+                window.history.pushState({ page: pageName }, '', url);
+            }
+            
+            function showHome() {
+                showPage(null);
+            }
+            
+            // Intercept navigation clicks
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageName = link.dataset.page;
+                    if (pageName) {
+                        showPage(pageName);
+                    }
+                });
+            });
+            
+            // Handle browser back/forward
+            window.addEventListener('popstate', (e) => {
+                const page = e.state ? e.state.page : null;
+                if (page) {
+                    showPage(page);
+                } else {
+                    showHome();
+                }
+            });
+            
+            // Check initial URL
+            const path = window.location.pathname;
+            if (path.includes('about.html')) showPage('about');
+            else if (path.includes('projects.html')) showPage('projects');
+            else if (path.includes('habits.html')) showPage('habits');
+            else if (path.includes('other.html')) showPage('other');
+        })();
+    </script>
+    <script>
+        // Typing and deleting animation
+        (function() {
+            const centerText = document.getElementById('centerText');
+            if (!centerText) return;
+            
+            const fullText = 'Charan Bhupathi.';
+            const typingSpeed = 150; // milliseconds per letter
+            const deletingSpeed = 100; // milliseconds per letter when deleting
+            const pauseAfterComplete = 1000; // pause 1 second after typing completes
+            
+            function typeText() {
+                centerText.style.opacity = '1';
+                
+                let index = 0;
+                const typeInterval = setInterval(() => {
+                    if (index < fullText.length) {
+                        centerText.textContent = fullText.substring(0, index + 1);
+                        index++;
+                    } else {
+                        clearInterval(typeInterval);
+                        // After typing completes, wait and then start deleting
+                        setTimeout(() => {
+                            deleteText();
+                        }, pauseAfterComplete);
+                    }
+                }, typingSpeed);
+            }
+            
+            function deleteText() {
+                let index = fullText.length;
+                const deleteInterval = setInterval(() => {
+                    if (index > 0) {
+                        centerText.textContent = fullText.substring(0, index - 1);
+                        index--;
+                    } else {
+                        clearInterval(deleteInterval);
+                        // After deleting completes, start typing again
+                        setTimeout(() => {
+                            typeText();
+                        }, 300);
+                    }
+                }, deletingSpeed);
+            }
+            
+            // Set initial font class
+            centerText.classList.add('font-default');
+            
+            // Start typing animation
+            typeText();
+        })();
+    </script>
+</body>
+</html>
+
