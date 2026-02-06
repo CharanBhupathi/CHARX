@@ -60,37 +60,6 @@ const saveMusicStateNow = () => {
     }
 };
 
-// Intercept navigation clicks to save state immediately
-document.addEventListener('DOMContentLoaded', () => {
-    // Intercept all navigation links (including back links)
-    const navLinks = document.querySelectorAll('a[href$=".html"]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            saveMusicStateNow();
-            // Use synchronous storage to ensure it's saved
-            const music = document.getElementById('backgroundMusic');
-            if (music) {
-                sessionStorage.setItem('musicPlaying', (!music.paused).toString());
-                sessionStorage.setItem('musicTime', music.currentTime.toString());
-            }
-        }, true); // Use capture phase for earlier execution
-    });
-    
-    // Also intercept on mousedown for even faster response
-    navLinks.forEach(link => {
-        link.addEventListener('mousedown', () => {
-            saveMusicStateNow();
-        }, true);
-    });
-    
-    // For touch devices
-    navLinks.forEach(link => {
-        link.addEventListener('touchstart', () => {
-            saveMusicStateNow();
-        }, true);
-    });
-});
-
 // Save state on page unload/hide (for browser back button and navigation)
 window.addEventListener('beforeunload', () => {
     saveMusicStateNow();
